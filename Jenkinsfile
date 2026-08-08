@@ -3,12 +3,27 @@ pipeline {
     
     environment {
         PYTHON = "./.venv/bin/python"
+        PIP = "./.venv/bin/pip"
     }
 
     stages {
         stage('Checkout') {
             steps { 
                 checkout scm 
+            }
+        }
+        
+        stage('Setup Environment') {
+            steps {
+                echo "Setting up Python virtual environment in Jenkins..."
+                sh '''
+                # Creăm mediul virtual în spațiul de lucru Jenkins
+                python3 -m venv .venv
+                
+                # Instalăm librăriile necesare pentru ingestie și evaluare
+                ${PIP} install --upgrade pip
+                ${PIP} install chromadb sentence-transformers requests
+                '''
             }
         }
         
@@ -23,7 +38,6 @@ pipeline {
         }
         
         stage('Incremental Re-index') {
-            // Aici este corecția: folosim blocul 'expression'
             when { 
                 expression { env.HAS_DOC_CHANGES == "true" }
             }
