@@ -1,14 +1,18 @@
 [
     {
-        "question": "What is the purpose and logic behind the compute_yearly_summaries.py file?",
+        "question": "What is the purpose and logic behind the compute_yearly_summaries.py file and how does it calculate yearly averages?",
         "expected_source": "compute_yearly_summaries.py"
     },
     {
-        "question": "How is the time series data loaded from MongoDB?",
-        "expected_source": "compute_yearly_summaries.py"
-    },
-    {
-        "question": "What is the role of train_price_regression.py?",
+        "question": "How is the time series data loaded and transformed using StandardScaler specifically for the Spark ML linear regression models?",
         "expected_source": "train_price_regression.py"
+    },
+    {
+        "question": "Which class is responsible for querying and extracting time series data from MongoDB in the Java Data Access Layer (DAL)?",
+        "expected_source": "TimeSeriesDataRepository.java"
+    },
+    {
+        "question": "Which class in the Java ingestion loader package is responsible for the initial importing and populating of market data into the database?",
+        "expected_source": "MarketDataLoader.java"
     }
 ]

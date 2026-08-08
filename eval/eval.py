@@ -15,5 +15,6 @@ for entry in golden_set:
 
 hit_rate = hits / len(golden_set)
 print(f"Retrieval Hit Rate: {hit_rate}")
-if hit_rate < 0.6:
-    exit(1) # Quality gate fail
+if hit_rate < 1:
+    print("Quality gate failed! Hit rate under 1.0")
+    exit(1)
