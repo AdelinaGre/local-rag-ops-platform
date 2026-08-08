@@ -1,92 +1,135 @@
 [
-    {
-        "question": "What is the purpose of the compute_yearly_summaries.py script?",
-        "expected_sources": ["compute_yearly_summaries.py"],
-        "difficulty": "easy"
-    },
-    {
-        "question": "Where is the TimeSeriesDataRepository interface located?",
-        "expected_sources": ["TimeSeriesDataRepository.java"],
-        "difficulty": "easy"
-    },
-    {
-        "question": "What is the role of train_price_regression.py?",
-        "expected_sources": ["train_price_regression.py"],
-        "difficulty": "easy"
-    },
-    {
-        "question": "Which file defines the AssetKey for the database partitions?",
-        "expected_sources": ["AssetKey.java"],
-        "difficulty": "easy"
-    },
-    {
-        "question": "Where is the main documentation for the Datawarehouse project?",
-        "expected_sources": ["README.md"],
-        "difficulty": "easy"
-    },
-    {
-        "question": "Which script contains the logic for building the machine learning linear regression models to predict market close prices?",
-        "expected_sources": ["train_price_regression.py"],
-        "difficulty": "medium"
-    },
-    {
-        "question": "How are the yearly averages and volume summaries calculated and saved using Spark?",
-        "expected_sources": ["compute_yearly_summaries.py"],
-        "difficulty": "medium"
-    },
-    {
-        "question": "Which Java classes are responsible for querying and extracting historical market data from the MongoDB backend?",
-        "expected_sources": ["TimeSeriesDataRepository.java", "TimeSeriesDataRepositoryImpl.java"],
-        "difficulty": "medium"
-    },
-    {
-        "question": "What component is used to initially load and populate the database with market data?",
-        "expected_sources": ["MarketDataLoader.java", "DefaultMarketDataLoader.java"],
-        "difficulty": "medium"
-    },
-    {
-        "question": "Which file manages the implementation details for querying the Asset collection?",
-        "expected_sources": ["AssetRepositoryImpl.java"],
-        "difficulty": "medium"
-    },
-    {
-        "question": "Where are the data structures defining the partition keys for data sources and time series?",
-        "expected_sources": ["DataSourceKey.java", "TimeSeriesPartitionKey.java"],
-        "difficulty": "medium"
-    },
-    {
-        "question": "I need to fix a bug where the Java backend is not retrieving the correct asset IDs. Which repository implementation should I check?",
-        "expected_sources": ["AssetRepositoryImpl.java", "AssetRepository.java"],
-        "difficulty": "hard"
-    },
-    {
-        "question": "If I want to change the elastic net regularization parameter from 0.0 to 0.5 for the ML pipeline, where exactly do I look?",
-        "expected_sources": ["train_price_regression.py"],
-        "difficulty": "hard"
-    },
-    {
-        "question": "Where is the logic that integrates MongoDB and Kafka to generate analytical insights using the MCP and LLM?",
-        "expected_sources": ["compute_yearly_summaries.py"],
-        "difficulty": "hard"
-    },
-    {
-        "question": "Which part of the system defines how data is sharded or grouped based on the specific time intervals and asset identifiers?",
-        "expected_sources": ["TimeSeriesPartitionKey.java", "AssetKey.java"],
-        "difficulty": "hard"
-    },
-    {
-        "question": "I want to modify the services to load alternative external financial datasets into the system. Which files control the ingestion logic?",
-        "expected_sources": ["MarketDataLoader.java", "DefaultMarketDataLoader.java"],
-        "difficulty": "hard"
-    },
-    {
-        "question": "Which file contains the implementation logic for the Warehouse Repository?",
-        "expected_sources": ["WarehouseRepository.java"],
-        "difficulty": "hard"
-    },
-    {
-        "question": "How is the project environment packaged and deployed, including the dependencies required to spin up the entire datawarehouse infrastructure?",
-        "expected_sources": ["docker-compose.yml", "build.gradle"],
-        "difficulty": "hard"
-    }
+  {
+    "query": "What is the purpose of the compute_yearly_summaries.py script?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/spark_analysis_ml/compute_yearly_summaries.py"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "query": "Where is the TimeSeriesDataRepository interface located?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/TimeSeriesDataRepository.java"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "query": "What is the role of train_price_regression.py?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/spark_analysis_ml/train_price_regression.py"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "query": "Which file defines the AssetKey for the database partitions?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/partitionKey/AssetKey.java"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "query": "Where is the main documentation for the Datawarehouse project?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/README.md"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "query": "Which script contains the logic for building the machine learning linear regression models to predict market close prices?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/spark_analysis_ml/train_price_regression.py"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "query": "How are the yearly averages and volume summaries calculated and saved using Spark?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/spark_analysis_ml/compute_yearly_summaries.py"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "query": "Which Java classes are responsible for querying and extracting historical market data from the MongoDB backend?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/TimeSeriesDataRepository.java",
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/TimeSeriesDataRepositoryImpl.java"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "query": "What component is used to initially load and populate the database with market data?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/service/MarketDataLoader.java",
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/service/DefaultMarketDataLoader.java"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "query": "Which file manages the implementation details for querying the Asset collection?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/AssetRepositoryImpl.java"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "query": "Where are the data structures defining the partition keys for data sources and time series?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/partitionKey/DataSourceKey.java",
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/partitionKey/TimeSeriesPartitionKey.java"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "query": "I need to fix a bug where the Java backend is not retrieving the correct asset IDs. Which repository implementation should I check?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/AssetRepositoryImpl.java",
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/AssetRepository.java"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "query": "If I want to change the elastic net regularization parameter from 0.0 to 0.5 for the ML pipeline, where exactly do I look?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/spark_analysis_ml/train_price_regression.py"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "query": "Where is the logic that integrates MongoDB and Kafka to generate analytical insights using the MCP and LLM?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/spark_analysis_ml/compute_yearly_summaries.py"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "query": "Which part of the system defines how data is sharded or grouped based on the specific time intervals and asset identifiers?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/partitionKey/TimeSeriesPartitionKey.java",
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/partitionKey/AssetKey.java"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "query": "I want to modify the services to load alternative external financial datasets into the system. Which files control the ingestion logic?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/service/MarketDataLoader.java",
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/service/DefaultMarketDataLoader.java"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "query": "Which file contains the implementation logic for the Warehouse Repository?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/WarehouseRepository.java"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "query": "How is the project environment packaged and deployed, including the dependencies required to spin up the entire datawarehouse infrastructure?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/docker-compose.yml",
+      "docs/datawarehouse/datawarehouse/build.gradle"
+    ],
+    "difficulty": "hard"
+  }
 ]
