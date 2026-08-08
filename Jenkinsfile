@@ -50,7 +50,7 @@ if not p.exists():
 
 data = json.loads(p.read_text(encoding="utf-8"))
 
-min_source_hit = 0.60
+min_source_hit = 0.85
 min_keyword_recall = 0.70
 max_empty_context = 0.10
 
