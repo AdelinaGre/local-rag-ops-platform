@@ -8,10 +8,29 @@ pipeline {
 
     stages {
         stage('Checkout') {
-            steps { 
-                checkout scm 
-            }
-        }
+    steps {
+        checkout([
+            $class: 'GitSCM',
+            branches: scm.branches,
+            userRemoteConfigs: scm.userRemoteConfigs,
+            extensions: [
+                [$class: 'SubmoduleOption',
+                    disableSubmodules: false,
+                    parentCredentials: true,
+                    recursiveSubmodules: true,
+                    trackingSubmodules: true
+                ]
+            ]
+        ])
+
+        sh '''
+        echo "=== Verify submodule content ==="
+        git submodule status || true
+        find docs/datawarehouse -maxdepth 6 -type f | head -50 || true
+        find . -type f -name "*.java" | wc -l
+        '''
+    }
+}
         
         stage('Setup Environment') {
             steps {
