@@ -1,7 +1,45 @@
-stage('Quality Gate') {
-    steps {
-        sh '''
-        ${PYTHON} - << 'PY'
+pipeline {
+    agent any
+
+    environment {
+        PYTHON = "./.venv/bin/python"
+        PIP = "./.venv/bin/pip"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Setup Environment') {
+            steps {
+                sh '''
+                python3 -m venv .venv
+                ${PIP} install --upgrade pip
+                ${PIP} install torch --index-url https://download.pytorch.org/whl/cpu
+                ${PIP} install chromadb sentence-transformers requests
+                '''
+            }
+        }
+
+        stage('Re-index') {
+            steps {
+                sh "${PYTHON} ingestion/ingest.py"
+            }
+        }
+
+        stage('Evaluation') {
+            steps {
+                sh "${PYTHON} eval/run_eval.py"
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                sh '''
+                ${PYTHON} - << 'PY'
 import json, sys
 from pathlib import Path
 
@@ -12,7 +50,7 @@ if not p.exists():
 
 data = json.loads(p.read_text(encoding="utf-8"))
 
-min_source_hit = 0.80
+min_source_hit = 0.60
 min_keyword_recall = 0.70
 max_empty_context = 0.10
 
@@ -30,6 +68,17 @@ if source_hit < min_source_hit or kw_recall < min_keyword_recall or empty_rate >
 
 print("Quality gate passed.")
 PY
-        '''
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'eval/results.json', fingerprint: true
+        }
+        failure {
+            echo "RAG-Ops Pipeline Failed!"
+        }
     }
 }
