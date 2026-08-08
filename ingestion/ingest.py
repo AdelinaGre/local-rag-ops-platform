@@ -121,8 +121,14 @@ def split_oversized_block(block: str, hard_limit: int):
     return final_out
 
 
-def semantic_chunking(text, filename, max_size=800, overlap_size=150):
+def semantic_chunking(text, filename, max_size=None, overlap_size=None):
     ext = os.path.splitext(filename)[1].lower()
+    if ext in [".java", ".py", ".sql"]:
+        max_size = 350
+        overlap_size = 75
+    else:
+        max_size = 800
+        overlap_size = 150
     language_map = {
         ".py": "python",
         ".java": "java",
@@ -195,7 +201,13 @@ def process_file(filepath, git_sha):
         print(f"  -> Sărit (binar/gol): {rel_path} | len={len(full_text)} | nul={has_nul}")
         return 0, "empty_or_binary"
 
-    chunk_data = semantic_chunking(full_text, filename)
+    if len(full_text) < 1200:
+        chunk_data = [{
+            "text": full_text,
+            "language": os.path.splitext(filename)[1].lower()
+        }]
+    else:
+        chunk_data = semantic_chunking(full_text, filename)
     updated_at = datetime.datetime.now().isoformat()
 
     ids = []
@@ -213,18 +225,35 @@ def process_file(filepath, git_sha):
         chunk_id = f"{rel_path}::chunk_{i}::{short_hash}"
 
         ids.append(chunk_id)
-        documents.append(chunk_text)
+        document_for_embedding = f"""
+        FILE_PATH:
+        {rel_path}
+
+        FILE_NAME:
+        {filename}
+
+        CONTENT:
+        {chunk_text}
+        """.strip()
+
+        documents.append(document_for_embedding)
         metadatas.append({
             "source_file": filename,
             "source_path": rel_path,
+            "file_extension": os.path.splitext(filename)[1].lower(),
+            "filename_lower": filename.lower(),
             "language": c_data["language"],
             "chunk_index": i,
             "chunk_id": chunk_id,
             "chunk_size_chars": len(chunk_text),
             "updated_at": updated_at,
-            "git_commit_sha": git_sha
+            "git_commit_sha": git_sha,
+            "branch": os.getenv("BRANCH_NAME", "local"),
+            "build_number": os.getenv("BUILD_NUMBER", "local")
         })
-        embeddings.append(embedder.encode(chunk_text).tolist())
+        embeddings.append(
+            embedder.encode(document_for_embedding).tolist()
+        )
 
     if not ids:
         print(f"  -> Sărit (fără chunk-uri valide): {rel_path}")
