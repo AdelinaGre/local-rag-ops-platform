@@ -17,11 +17,13 @@ pipeline {
             steps {
                 echo "Setting up Python virtual environment in Jenkins..."
                 sh '''
-                # Creăm mediul virtual în spațiul de lucru Jenkins
                 python3 -m venv .venv
-                
-                # Instalăm librăriile necesare pentru ingestie și evaluare
                 ${PIP} install --upgrade pip
+                
+                # Instalam PyTorch varianta CPU (fara gigabiții de drivere Nvidia)
+                ${PIP} install torch --index-url https://download.pytorch.org/whl/cpu
+                
+                # Apoi instalam restul pachetelor
                 ${PIP} install chromadb sentence-transformers requests
                 '''
             }
