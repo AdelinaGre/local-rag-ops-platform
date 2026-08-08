@@ -1,6 +1,6 @@
 pipeline {
     agent any
-    
+
     environment {
         PYTHON = "./.venv/bin/python"
         PIP = "./.venv/bin/pip"
@@ -8,89 +8,65 @@ pipeline {
 
     stages {
         stage('Checkout') {
-    steps {
-        checkout([
-            $class: 'GitSCM',
-            branches: scm.branches,
-            userRemoteConfigs: scm.userRemoteConfigs,
-            extensions: [
-                [$class: 'SubmoduleOption',
-                    disableSubmodules: false,
-                    parentCredentials: true,
-                    recursiveSubmodules: true,
-                    trackingSubmodules: true
-                ]
-            ]
-        ])
+            steps {
+                checkout scm
+            }
+        }
 
-        sh '''
-        echo "=== Verify submodule content ==="
-        git submodule status || true
-        find docs/datawarehouse -maxdepth 6 -type f | head -50 || true
-        find . -type f -name "*.java" | wc -l
-        '''
-    }
-}
-        
         stage('Setup Environment') {
             steps {
-                echo "Setting up Python virtual environment in Jenkins..."
                 sh '''
                 python3 -m venv .venv
                 ${PIP} install --upgrade pip
-                
-                # Instalam PyTorch varianta CPU (fara gigabiții de drivere Nvidia)
                 ${PIP} install torch --index-url https://download.pytorch.org/whl/cpu
-                
-                # Apoi instalam restul pachetelor
                 ${PIP} install chromadb sentence-transformers requests
                 '''
             }
         }
-        
-        stage('Detect Changes') {
+
+        stage('Re-index') {
             steps {
-                script {
-                    // Caută orice fișier modificat cu extensiile noastre (inclusiv java)
-                    def changes = sh(script: "git diff --name-only HEAD~1 HEAD | grep -E '\\.(md|txt|py|sql|java)\$' || true", returnStdout: true).trim()
-                    env.HAS_DOC_CHANGES = changes ? "true" : "false"
-                    echo "Changes detected: ${env.HAS_DOC_CHANGES}"
-                }
-            }
-        }
-        
-        stage('Incremental Re-index') {
-            // Rulăm ingestia completă (ștergem temporar condiția 'when')
-            steps {
-                echo "Running full ingestion..."
                 sh "${PYTHON} ingestion/ingest.py"
             }
         }
-        
-        stage('Retrieval Evaluation') {
+
+        stage('Evaluation') {
             steps {
-                echo "Evaluating RAG retrieval quality..."
-                sh "${PYTHON} eval/eval.py"
+                sh "${PYTHON} eval/run_eval.py"
             }
         }
-        
+
         stage('Quality Gate') {
             steps {
-                echo "Quality Gate: Retrieval hit rate check passed."
-            }
-        }
-        
-        stage('Build & Deploy') {
-            steps {
-                echo "Restarting RAG-API service..."
-                sh 'podman restart rag-api || true'
+                script {
+                    def results = readJSON file: 'eval/results.json'
+
+                    def minSourceHit = 0.80
+                    def minKeywordRecall = 0.70
+                    def maxEmptyContext = 0.10
+
+                    echo "source_hit_rate=${results.source_hit_rate}"
+                    echo "answer_keyword_recall=${results.answer_keyword_recall}"
+                    echo "empty_context_rate=${results.empty_context_rate}"
+
+                    if (results.source_hit_rate < minSourceHit ||
+                        results.answer_keyword_recall < minKeywordRecall ||
+                        results.empty_context_rate > maxEmptyContext) {
+                        error("Quality gate failed!")
+                    }
+
+                    echo "Quality gate passed."
+                }
             }
         }
     }
-    
+
     post {
+        always {
+            archiveArtifacts artifacts: 'eval/results.json', fingerprint: true
+        }
         failure {
-            echo "RAG-Ops Pipeline Failed! Check the logs for ingestion errors or low hit rates."
+            echo "RAG-Ops Pipeline Failed!"
         }
     }
 }

@@ -1,0 +1,32 @@
+[
+  {
+    "question": "What is the purpose of the compute_yearly_summaries.py script?",
+    "expected_sources": ["docs/datawarehouse/datawarehouse/spark_analysis_ml/compute_yearly_summaries.py"],
+    "required_keywords": ["spark", "yearly", "summary"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "In which file is the interface TimeSeriesDataRepository declared?",
+    "expected_sources": ["docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/TimeSeriesDataRepository.java"],
+    "required_keywords": ["timeseriesdatarepository", "interface"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "What is the role of train_price_regression.py?",
+    "expected_sources": ["docs/datawarehouse/datawarehouse/spark_analysis_ml/train_price_regression.py"],
+    "required_keywords": ["regression", "model", "price"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "Which file defines the AssetKey for the database partitions?",
+    "expected_sources": ["docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/partitionKey/AssetKey.java"],
+    "required_keywords": ["assetkey", "partition"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "Where is the main documentation for the Datawarehouse project?",
+    "expected_sources": ["docs/datawarehouse/datawarehouse/README.md"],
+    "required_keywords": ["datawarehouse"],
+    "difficulty": "easy"
+  }
+]
