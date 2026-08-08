@@ -1,72 +1,35 @@
-pipeline {
-    agent any
+stage('Quality Gate') {
+    steps {
+        sh '''
+        ${PYTHON} - << 'PY'
+import json, sys
+from pathlib import Path
 
-    environment {
-        PYTHON = "./.venv/bin/python"
-        PIP = "./.venv/bin/pip"
-    }
+p = Path("eval/results.json")
+if not p.exists():
+    print("Missing eval/results.json")
+    sys.exit(1)
 
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
+data = json.loads(p.read_text(encoding="utf-8"))
 
-        stage('Setup Environment') {
-            steps {
-                sh '''
-                python3 -m venv .venv
-                ${PIP} install --upgrade pip
-                ${PIP} install torch --index-url https://download.pytorch.org/whl/cpu
-                ${PIP} install chromadb sentence-transformers requests
-                '''
-            }
-        }
+min_source_hit = 0.80
+min_keyword_recall = 0.70
+max_empty_context = 0.10
 
-        stage('Re-index') {
-            steps {
-                sh "${PYTHON} ingestion/ingest.py"
-            }
-        }
+source_hit = float(data.get("source_hit_rate", 0.0))
+kw_recall = float(data.get("answer_keyword_recall", 0.0))
+empty_rate = float(data.get("empty_context_rate", 1.0))
 
-        stage('Evaluation') {
-            steps {
-                sh "${PYTHON} eval/run_eval.py"
-            }
-        }
+print(f"source_hit_rate={source_hit}")
+print(f"answer_keyword_recall={kw_recall}")
+print(f"empty_context_rate={empty_rate}")
 
-        stage('Quality Gate') {
-            steps {
-                script {
-                    def results = readJSON file: 'eval/results.json'
+if source_hit < min_source_hit or kw_recall < min_keyword_recall or empty_rate > max_empty_context:
+    print("Quality gate failed!")
+    sys.exit(1)
 
-                    def minSourceHit = 0.80
-                    def minKeywordRecall = 0.70
-                    def maxEmptyContext = 0.10
-
-                    echo "source_hit_rate=${results.source_hit_rate}"
-                    echo "answer_keyword_recall=${results.answer_keyword_recall}"
-                    echo "empty_context_rate=${results.empty_context_rate}"
-
-                    if (results.source_hit_rate < minSourceHit ||
-                        results.answer_keyword_recall < minKeywordRecall ||
-                        results.empty_context_rate > maxEmptyContext) {
-                        error("Quality gate failed!")
-                    }
-
-                    echo "Quality gate passed."
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            archiveArtifacts artifacts: 'eval/results.json', fingerprint: true
-        }
-        failure {
-            echo "RAG-Ops Pipeline Failed!"
-        }
+print("Quality gate passed.")
+PY
+        '''
     }
 }
