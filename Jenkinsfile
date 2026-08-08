@@ -1,7 +1,6 @@
 pipeline {
     agent any
     
-    // Setăm mediul pentru a folosi Python-ul din mediul virtual creat anterior
     environment {
         PYTHON = "./.venv/bin/python"
     }
@@ -16,7 +15,6 @@ pipeline {
         stage('Detect Changes') {
             steps {
                 script {
-                    // Verificăm dacă există modificări în folderul docs/ față de ultimul commit
                     def changes = sh(script: "git diff --name-only HEAD~1 HEAD | grep '^docs/' || true", returnStdout: true).trim()
                     env.HAS_DOC_CHANGES = changes ? "true" : "false"
                     echo "Changes detected in docs: ${env.HAS_DOC_CHANGES}"
@@ -25,7 +23,10 @@ pipeline {
         }
         
         stage('Incremental Re-index') {
-            when { env.HAS_DOC_CHANGES == "true" }
+            // Aici este corecția: folosim blocul 'expression'
+            when { 
+                expression { env.HAS_DOC_CHANGES == "true" }
+            }
             steps {
                 echo "Running incremental ingestion..."
                 sh "${PYTHON} ingestion/ingest.py --changed-only"
@@ -35,7 +36,6 @@ pipeline {
         stage('Retrieval Evaluation') {
             steps {
                 echo "Evaluating RAG retrieval quality..."
-                // Presupunem că ai creat fișierul eval/eval.py
                 sh "${PYTHON} eval/eval.py"
             }
         }
@@ -49,7 +49,6 @@ pipeline {
         stage('Build & Deploy') {
             steps {
                 echo "Restarting RAG-API service..."
-                // Restartăm containerul pentru a aplica eventuale schimbări
                 sh 'podman restart rag-api || true'
             }
         }
