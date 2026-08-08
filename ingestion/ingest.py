@@ -31,13 +31,17 @@ def get_changed_files():
     try:
         output = subprocess.check_output(
             ['git', 'diff', '--name-only', 'HEAD~1', 'HEAD'],
-            cwd=os.path.join(DOCS_DIR, "..")
+            cwd=DOCS_DIR
         ).decode('ascii')
 
         changed = []
         for line in output.split('\n'):
-            if line.startswith('docs/') and line.endswith(('.md', '.txt', '.py', '.sql', '.java')):
-                changed.append(os.path.join(os.path.join(DOCS_DIR, ".."), line))
+            line = line.strip()
+            # Acceptăm orice fișier modificat care are extensiile noastre permise, indiferent de folder
+            if line and line.endswith(('.md', '.txt', '.py', '.sql', '.java')):
+                full_path = os.path.join(DOCS_DIR, line)
+                if os.path.exists(full_path):
+                    changed.append(full_path)
         return changed
     except Exception:
         return []
