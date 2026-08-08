@@ -1,0 +1,14 @@
+[
+    {
+        "question": "What is the purpose and logic behind the compute_yearly_summaries.py file?",
+        "expected_source": "compute_yearly_summaries.py"
+    },
+    {
+        "question": "How is the time series data loaded from MongoDB?",
+        "expected_source": "compute_yearly_summaries.py"
+    },
+    {
+        "question": "What is the role of train_price_regression.py?",
+        "expected_source": "train_price_regression.py"
+    }
+]
