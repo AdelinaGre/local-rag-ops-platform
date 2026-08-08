@@ -1,0 +1,29 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'com.datawarehouse'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+dependencies {
+    implementation platform("io.modelcontextprotocol.sdk:mcp-bom:1.1.3")
+    implementation "io.modelcontextprotocol.sdk:mcp"
+    implementation "io.modelcontextprotocol.sdk:mcp-json-jackson3"
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.17.2"
+    implementation "org.slf4j:slf4j-simple:2.0.13"
+}
+
+application {
+    mainClass = "com.datawarehouse.mcp.WarehouseMcpServer"
+}

@@ -1,0 +1,418 @@
+openapi: 3.0.3
+info:
+  title: Financial Market Data Warehouse API
+  version: 1.0.0
+  description: >
+    REST API for reading versioned financial warehouse data, starting ingestion
+    jobs, running Spark analytics, controlling Binance streaming, and querying
+    the grounded LLM assistant.
+servers:
+  - url: http://127.0.0.1:8081/api/v1
+tags:
+  - name: Warehouse Read
+  - name: Ingestion
+  - name: Streaming
+  - name: Analytics
+  - name: Assistant
+paths:
+  /assets:
+    get:
+      tags: [Warehouse Read]
+      summary: List financial asset identifiers
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Paged asset identifiers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedIdsResponse'
+  /assets/{assetId}:
+    get:
+      tags: [Warehouse Read]
+      summary: Get latest visible asset details
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Asset details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /data-sources:
+    get:
+      tags: [Warehouse Read]
+      summary: List data-source identifiers
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Paged data-source identifiers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedIdsResponse'
+  /data-sources/{dataSourceId}:
+    get:
+      tags: [Warehouse Read]
+      summary: Get latest visible data-source details
+      parameters:
+        - name: dataSourceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Data-source details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSource'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /data:
+    get:
+      tags: [Warehouse Read]
+      summary: Read bounded latest-visible time-series records
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+        - $ref: '#/components/parameters/DataSourceId'
+        - $ref: '#/components/parameters/StartBusinessDate'
+        - $ref: '#/components/parameters/EndBusinessDate'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - name: includeAttributes
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Time-series records with temporal semantics and provenance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeSeriesQueryResponse'
+  /data/stream:
+    get:
+      tags: [Warehouse Read]
+      summary: Stream bounded time-series records as NDJSON
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+        - $ref: '#/components/parameters/DataSourceId'
+        - $ref: '#/components/parameters/StartBusinessDate'
+        - $ref: '#/components/parameters/EndBusinessDate'
+      responses:
+        '200':
+          description: Newline-delimited JSON records
+          content:
+            application/x-ndjson:
+              schema:
+                type: string
+  /ingestions/{provider}/{assetId}:
+    post:
+      tags: [Ingestion]
+      summary: Run a synchronous provider ingestion
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [nasdaq, alphavantage]
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ingestion result counters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestionResult'
+  /ingestions/async/{provider}/{assetId}:
+    post:
+      tags: [Ingestion]
+      summary: Queue an asynchronous Kafka ingestion job
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [nasdaq, alphavantage]
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Accepted ingestion job
+  /streaming/binance/start:
+    post:
+      tags: [Streaming]
+      summary: Start Binance WebSocket streaming into Kafka
+      responses:
+        '200':
+          description: Streaming status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StreamingStatus'
+  /streaming/binance/stop:
+    post:
+      tags: [Streaming]
+      summary: Stop Binance WebSocket streaming
+      responses:
+        '200':
+          description: Streaming status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StreamingStatus'
+  /streaming/binance/status:
+    get:
+      tags: [Streaming]
+      summary: Get Binance streaming status
+      responses:
+        '200':
+          description: Streaming status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StreamingStatus'
+  /analytics/run/yearly-summaries:
+    post:
+      tags: [Analytics]
+      summary: Run the Spark yearly summaries job
+      responses:
+        '202':
+          description: Spark job accepted or started
+  /analytics/run/price-regression:
+    post:
+      tags: [Analytics]
+      summary: Run the Spark price regression job
+      parameters:
+        - name: assetId
+          in: query
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Spark job accepted or started
+  /analytics/yearly-summaries:
+    get:
+      tags: [Analytics]
+      summary: Read Spark yearly summary outputs
+      parameters:
+        - name: assetId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Yearly summaries
+  /analytics/price-predictions:
+    get:
+      tags: [Analytics]
+      summary: Read Spark ML prediction outputs
+      parameters:
+        - name: assetId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Price predictions
+  /assistant/chat:
+    post:
+      tags: [Assistant]
+      summary: Ask the grounded LLM assistant to analyze warehouse data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssistantChatRequest'
+      responses:
+        '200':
+          description: Grounded assistant response with tool call trace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantChatResponse'
+components:
+  parameters:
+    Offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    AssetId:
+      name: assetId
+      in: query
+      required: true
+      schema:
+        type: string
+    DataSourceId:
+      name: dataSourceId
+      in: query
+      required: true
+      schema:
+        type: string
+    StartBusinessDate:
+      name: startBusinessDate
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+    EndBusinessDate:
+      name: endBusinessDate
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+  responses:
+    NotFound:
+      description: Resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    PagedIdsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: string
+        offset:
+          type: integer
+        limit:
+          type: integer
+        hasNext:
+          type: boolean
+    Asset:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        symbol: { type: string }
+        assetType: { type: string }
+        systemDate: { type: string, format: date-time }
+        attributes:
+          type: object
+          additionalProperties:
+            type: string
+    DataSource:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        provider: { type: string }
+        dataset: { type: string }
+        systemDate: { type: string, format: date-time }
+        requestContext:
+          type: object
+          additionalProperties:
+            type: string
+        attributes:
+          type: array
+          items:
+            type: string
+    TimeSeriesQueryResponse:
+      type: object
+      properties:
+        selection:
+          type: object
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeSeriesPoint'
+        page:
+          type: object
+        temporalSemantics:
+          type: object
+        provenance:
+          type: object
+    TimeSeriesPoint:
+      type: object
+      properties:
+        assetId: { type: string }
+        dataSourceId: { type: string }
+        businessDate: { type: string, format: date-time }
+        systemDate: { type: string, format: date-time }
+        payload:
+          type: object
+          additionalProperties: true
+    IngestionResult:
+      type: object
+      properties:
+        fetchedRecords: { type: integer }
+        transformedRecords: { type: integer }
+        storedRecords: { type: integer }
+        skippedRecords: { type: integer }
+        failedRecords: { type: integer }
+        message: { type: string }
+    StreamingStatus:
+      type: object
+      properties:
+        provider: { type: string }
+        status: { type: string }
+        running: { type: boolean }
+        startedAt: { type: string, format: date-time }
+        lastMessageAt: { type: string, format: date-time }
+        lastError: { type: string }
+    AssistantChatRequest:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+        assetId: { type: string }
+        dataSourceId: { type: string }
+        startBusinessDate: { type: string, format: date }
+        endBusinessDate: { type: string, format: date }
+    AssistantChatResponse:
+      type: object
+      properties:
+        answer: { type: string }
+        usedLlm: { type: boolean }
+        toolCalls:
+          type: array
+          items:
+            type: object
+    ApiError:
+      type: object
+      properties:
+        message: { type: string }
+        path: { type: string }
+        timestamp: { type: string, format: date-time }
