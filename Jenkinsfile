@@ -32,20 +32,19 @@ pipeline {
         stage('Detect Changes') {
             steps {
                 script {
-                    def changes = sh(script: "git diff --name-only HEAD~1 HEAD | grep '^docs/' || true", returnStdout: true).trim()
+                    // Caută orice fișier modificat cu extensiile noastre (inclusiv java)
+                    def changes = sh(script: "git diff --name-only HEAD~1 HEAD | grep -E '\\.(md|txt|py|sql|java)\$' || true", returnStdout: true).trim()
                     env.HAS_DOC_CHANGES = changes ? "true" : "false"
-                    echo "Changes detected in docs: ${env.HAS_DOC_CHANGES}"
+                    echo "Changes detected: ${env.HAS_DOC_CHANGES}"
                 }
             }
         }
         
         stage('Incremental Re-index') {
-            when { 
-                expression { env.HAS_DOC_CHANGES == "true" }
-            }
+            // Rulăm ingestia completă (ștergem temporar condiția 'when')
             steps {
-                echo "Running incremental ingestion..."
-                sh "${PYTHON} ingestion/ingest.py --changed-only"
+                echo "Running full ingestion..."
+                sh "${PYTHON} ingestion/ingest.py"
             }
         }
         

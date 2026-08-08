@@ -36,7 +36,7 @@ def get_changed_files():
 
         changed = []
         for line in output.split('\n'):
-            if line.startswith('docs/') and line.endswith(('.md', '.txt', '.py', '.sql')):
+            if line.startswith('docs/') and line.endswith(('.md', '.txt', '.py', '.sql', '.java')):
                 changed.append(os.path.join(os.path.join(DOCS_DIR, ".."), line))
         return changed
     except Exception:
@@ -114,7 +114,7 @@ def main():
             # Tăiem din căutare folderele ignorate
             dirs[:] = [d for d in dirs if d not in ignored_folders]
             for file in files:
-                if file.endswith(('.md', '.txt', '.py', '.sql')):
+                if file.endswith(('.md', '.txt', '.py', '.sql', '.java')):
                     files_to_process.append(os.path.join(root, file))
 
     if not files_to_process:
