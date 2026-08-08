@@ -6,7 +6,7 @@ import chromadb
 from sentence_transformers import SentenceTransformer
 
 # === CONFIGURARE ===
-CHROMA_HOST = "localhost"
+CHROMA_HOST = "10.0.2.2"
 CHROMA_PORT = 8000
 DOCS_DIR = os.path.join(os.path.dirname(__file__), "..", "docs")
 BATCH_SIZE = 50  # Numărul maxim de fragmente trimise simultan
