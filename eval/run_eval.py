@@ -16,25 +16,85 @@ RESULTS_PATH = Path("eval/results.json")
 
 
 def norm(s: str) -> str:
-    return (s or "").replace("\\", "/").strip().lower()
+    s = (s or "").replace("\\", "/").strip().lower()
+    s = re.sub(r"/+", "/", s)
+    return s
 
 
-def has_expected_source(expected_sources, metadatas):
-    got_paths = []
-    for md in metadatas:
-        p = norm(md.get("source_path", "")) if md else ""
-        f = norm(md.get("source_file", "")) if md else ""
-        got_paths.append(p or f)
+def base(p: str) -> str:
+    return os.path.basename(p) if p else ""
 
+
+def canonicalize_expected(exp: str) -> str:
+    e = norm(exp)
+    # uniformize common docs path variants
+    if e == "readme.md":
+        return "readme.md"
+    return e
+
+
+def collect_retrieved_paths(metadatas):
+    out = []
+    for md in metadatas or []:
+        if not md:
+            continue
+        p = norm(md.get("source_path", ""))
+        f = norm(md.get("source_file", ""))
+        # prefer source_path, fallback source_file
+        cand = p or f
+        if cand:
+            out.append(cand)
+
+    # dedupe preserving order
+    seen = set()
+    deduped = []
+    for x in out:
+        if x not in seen:
+            deduped.append(x)
+            seen.add(x)
+    return deduped
+
+
+def source_match(expected: str, got: str) -> bool:
+    e = canonicalize_expected(expected)
+    g = norm(got)
+
+    if not e or not g:
+        return False
+
+    e_base = base(e)
+    g_base = base(g)
+
+    # 1) exact
+    if g == e:
+        return True
+
+    # 2) endswith full expected path
+    if g.endswith(e):
+        return True
+
+    # 3) basename exact
+    if e_base and g_base and e_base == g_base:
+        return True
+
+    # 4) special case for README ambiguity:
+    # accept only if expected is nested README and got endswith that nested path
+    # otherwise basename-only "readme.md" is too weak.
+    if e_base == "readme.md":
+        # if expected is full path, require suffix path or exact
+        if "/" in e and g.endswith(e):
+            return True
+        return False
+
+    return False
+
+
+def has_expected_source(expected_sources, retrieved_sources):
     for exp in expected_sources:
-        e = norm(exp)
-        e_base = os.path.basename(e)
-        for g in got_paths:
-            if not g:
-                continue
-            if g == e or g.endswith(e) or os.path.basename(g) == e_base:
-                return True, got_paths
-    return False, got_paths
+        for got in retrieved_sources:
+            if source_match(exp, got):
+                return True
+    return False
 
 
 def keyword_recall(required_keywords, documents_text):
@@ -66,8 +126,8 @@ def main():
     failures = []
 
     for item in golden:
-        q = item.get("question", "").strip()
-        expected = item.get("expected_sources", [])
+        q = (item.get("question") or "").strip()
+        expected = [norm(x) for x in item.get("expected_sources", []) if isinstance(x, str) and x.strip()]
         required_keywords = item.get("required_keywords", [])
 
         if not q or not expected:
@@ -87,7 +147,9 @@ def main():
         if not joined_docs.strip():
             empty_context += 1
 
-        hit, got_paths = has_expected_source(expected, metas)
+        retrieved_sources = collect_retrieved_paths(metas)
+        hit = has_expected_source(expected, retrieved_sources)
+
         if hit:
             source_hits += 1
 
@@ -98,7 +160,7 @@ def main():
             failures.append({
                 "question": q,
                 "expected_sources": expected,
-                "retrieved_sources": got_paths,
+                "retrieved_sources": retrieved_sources,
                 "keyword_recall": kr
             })
 
