@@ -2,7 +2,7 @@ import json
 import requests
 
 # Setul de întrebări și răspunsuri așteptate
-GOLDEN_SET_URL = "http://localhost:8050/ask"
+GOLDEN_SET_URL = "http://10.0.2.2:8050/ask"
 with open("eval/golden_set.json", "r") as f:
     golden_set = json.load(f)
 
