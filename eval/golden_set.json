@@ -1,18 +1,92 @@
 [
     {
-        "question": "What is the purpose and logic behind the compute_yearly_summaries.py file and how does it calculate yearly averages?",
-        "expected_source": "compute_yearly_summaries.py"
+        "question": "What is the purpose of the compute_yearly_summaries.py script?",
+        "expected_sources": ["compute_yearly_summaries.py"],
+        "difficulty": "easy"
     },
     {
-        "question": "How is the time series data loaded and transformed using StandardScaler specifically for the Spark ML linear regression models?",
-        "expected_source": "train_price_regression.py"
+        "question": "Where is the TimeSeriesDataRepository interface located?",
+        "expected_sources": ["TimeSeriesDataRepository.java"],
+        "difficulty": "easy"
     },
     {
-        "question": "Which class is responsible for querying and extracting time series data from MongoDB in the Java Data Access Layer (DAL)?",
-        "expected_source": "TimeSeriesDataRepository.java"
+        "question": "What is the role of train_price_regression.py?",
+        "expected_sources": ["train_price_regression.py"],
+        "difficulty": "easy"
     },
     {
-        "question": "Which class in the Java ingestion loader package is responsible for the initial importing and populating of market data into the database?",
-        "expected_source": "MarketDataLoader.java"
+        "question": "Which file defines the AssetKey for the database partitions?",
+        "expected_sources": ["AssetKey.java"],
+        "difficulty": "easy"
+    },
+    {
+        "question": "Where is the main documentation for the Datawarehouse project?",
+        "expected_sources": ["README.md"],
+        "difficulty": "easy"
+    },
+    {
+        "question": "Which script contains the logic for building the machine learning linear regression models to predict market close prices?",
+        "expected_sources": ["train_price_regression.py"],
+        "difficulty": "medium"
+    },
+    {
+        "question": "How are the yearly averages and volume summaries calculated and saved using Spark?",
+        "expected_sources": ["compute_yearly_summaries.py"],
+        "difficulty": "medium"
+    },
+    {
+        "question": "Which Java classes are responsible for querying and extracting historical market data from the MongoDB backend?",
+        "expected_sources": ["TimeSeriesDataRepository.java", "TimeSeriesDataRepositoryImpl.java"],
+        "difficulty": "medium"
+    },
+    {
+        "question": "What component is used to initially load and populate the database with market data?",
+        "expected_sources": ["MarketDataLoader.java", "DefaultMarketDataLoader.java"],
+        "difficulty": "medium"
+    },
+    {
+        "question": "Which file manages the implementation details for querying the Asset collection?",
+        "expected_sources": ["AssetRepositoryImpl.java"],
+        "difficulty": "medium"
+    },
+    {
+        "question": "Where are the data structures defining the partition keys for data sources and time series?",
+        "expected_sources": ["DataSourceKey.java", "TimeSeriesPartitionKey.java"],
+        "difficulty": "medium"
+    },
+    {
+        "question": "I need to fix a bug where the Java backend is not retrieving the correct asset IDs. Which repository implementation should I check?",
+        "expected_sources": ["AssetRepositoryImpl.java", "AssetRepository.java"],
+        "difficulty": "hard"
+    },
+    {
+        "question": "If I want to change the elastic net regularization parameter from 0.0 to 0.5 for the ML pipeline, where exactly do I look?",
+        "expected_sources": ["train_price_regression.py"],
+        "difficulty": "hard"
+    },
+    {
+        "question": "Where is the logic that integrates MongoDB and Kafka to generate analytical insights using the MCP and LLM?",
+        "expected_sources": ["compute_yearly_summaries.py"],
+        "difficulty": "hard"
+    },
+    {
+        "question": "Which part of the system defines how data is sharded or grouped based on the specific time intervals and asset identifiers?",
+        "expected_sources": ["TimeSeriesPartitionKey.java", "AssetKey.java"],
+        "difficulty": "hard"
+    },
+    {
+        "question": "I want to modify the services to load alternative external financial datasets into the system. Which files control the ingestion logic?",
+        "expected_sources": ["MarketDataLoader.java", "DefaultMarketDataLoader.java"],
+        "difficulty": "hard"
+    },
+    {
+        "question": "Which file contains the implementation logic for the Warehouse Repository?",
+        "expected_sources": ["WarehouseRepository.java"],
+        "difficulty": "hard"
+    },
+    {
+        "question": "How is the project environment packaged and deployed, including the dependencies required to spin up the entire datawarehouse infrastructure?",
+        "expected_sources": ["docker-compose.yml", "build.gradle"],
+        "difficulty": "hard"
     }
 ]
