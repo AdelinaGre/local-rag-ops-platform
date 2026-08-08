@@ -7,7 +7,7 @@
     "difficulty": "easy"
   },
   {
-    "query": "Where is the TimeSeriesDataRepository interface located?",
+    "query": "In which file is the interface TimeSeriesDataRepository declared?",
     "expected_sources": [
       "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/TimeSeriesDataRepository.java"
     ],
@@ -52,22 +52,22 @@
     "query": "Which Java classes are responsible for querying and extracting historical market data from the MongoDB backend?",
     "expected_sources": [
       "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/TimeSeriesDataRepository.java",
-      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/TimeSeriesDataRepositoryImpl.java"
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/impl/TimeSeriesDataRepositoryImpl.java"
     ],
     "difficulty": "medium"
   },
   {
     "query": "What component is used to initially load and populate the database with market data?",
     "expected_sources": [
-      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/service/MarketDataLoader.java",
-      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/service/DefaultMarketDataLoader.java"
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/ingestion/loader/MarketDataLoader.java",
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/ingestion/loader/DefaultMarketDataLoader.java"
     ],
     "difficulty": "medium"
   },
   {
     "query": "Which file manages the implementation details for querying the Asset collection?",
     "expected_sources": [
-      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/AssetRepositoryImpl.java"
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/impl/AssetRepositoryImpl.java"
     ],
     "difficulty": "medium"
   },
@@ -82,7 +82,7 @@
   {
     "query": "I need to fix a bug where the Java backend is not retrieving the correct asset IDs. Which repository implementation should I check?",
     "expected_sources": [
-      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/AssetRepositoryImpl.java",
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/impl/AssetRepositoryImpl.java",
       "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/AssetRepository.java"
     ],
     "difficulty": "hard"
@@ -95,14 +95,14 @@
     "difficulty": "hard"
   },
   {
-    "query": "Where is the logic that integrates MongoDB and Kafka to generate analytical insights using the MCP and LLM?",
+    "query": "Where is the Spark logic that computes yearly summaries used for analytics?",
     "expected_sources": [
       "docs/datawarehouse/datawarehouse/spark_analysis_ml/compute_yearly_summaries.py"
     ],
     "difficulty": "hard"
   },
   {
-    "query": "Which part of the system defines how data is sharded or grouped based on the specific time intervals and asset identifiers?",
+    "query": "Which part of the system defines how data is sharded or grouped based on specific time intervals and asset identifiers?",
     "expected_sources": [
       "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/partitionKey/TimeSeriesPartitionKey.java",
       "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/partitionKey/AssetKey.java"
@@ -110,22 +110,22 @@
     "difficulty": "hard"
   },
   {
-    "query": "I want to modify the services to load alternative external financial datasets into the system. Which files control the ingestion logic?",
+    "query": "I want to modify services that load external financial datasets into the system. Which files control this ingestion logic?",
     "expected_sources": [
-      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/service/MarketDataLoader.java",
-      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/service/DefaultMarketDataLoader.java"
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/ingestion/loader/MarketDataLoader.java",
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/ingestion/loader/DefaultMarketDataLoader.java"
     ],
     "difficulty": "hard"
   },
   {
-    "query": "Which file contains the implementation logic for the Warehouse Repository?",
+    "query": "Which file defines the contract for repository access to warehouse records?",
     "expected_sources": [
       "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/WarehouseRepository.java"
     ],
     "difficulty": "hard"
   },
   {
-    "query": "How is the project environment packaged and deployed, including the dependencies required to spin up the entire datawarehouse infrastructure?",
+    "query": "How is the project environment packaged and deployed, including dependencies needed to run the datawarehouse infrastructure?",
     "expected_sources": [
       "docs/datawarehouse/datawarehouse/docker-compose.yml",
       "docs/datawarehouse/datawarehouse/build.gradle"
