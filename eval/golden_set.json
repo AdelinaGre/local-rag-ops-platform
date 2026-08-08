@@ -1,8 +1,8 @@
 [
   {
-    "question": "In file compute_yearly_summaries.py, what Spark aggregations are computed for yearly market analytics?",
+    "question": "What is the purpose of the compute_yearly_summaries.py script?",
     "expected_sources": ["docs/datawarehouse/datawarehouse/spark_analysis_ml/compute_yearly_summaries.py"],
-    "required_keywords": ["spark", "yearly", "aggregation"],
+    "required_keywords": ["spark", "yearly", "summary"],
     "difficulty": "easy"
   },
   {
@@ -12,9 +12,9 @@
     "difficulty": "easy"
   },
   {
-    "question": "In train_price_regression.py, what model is trained to predict close prices?",
+    "question": "What is the role of train_price_regression.py?",
     "expected_sources": ["docs/datawarehouse/datawarehouse/spark_analysis_ml/train_price_regression.py"],
-    "required_keywords": ["regression", "model", "close"],
+    "required_keywords": ["regression", "model", "price"],
     "difficulty": "easy"
   },
   {
@@ -28,5 +28,113 @@
     "expected_sources": ["docs/datawarehouse/datawarehouse/README.md"],
     "required_keywords": ["readme", "datawarehouse"],
     "difficulty": "easy"
+  },
+  {
+    "question": "Which script trains the ML model for market close price prediction?",
+    "expected_sources": ["docs/datawarehouse/datawarehouse/spark_analysis_ml/train_price_regression.py"],
+    "required_keywords": ["train", "regression", "close"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "In which file is DataSourceKey defined?",
+    "expected_sources": ["docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/partitionKey/DataSourceKey.java"],
+    "required_keywords": ["datasourcekey", "partition"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "In which file is TimeSeriesPartitionKey defined?",
+    "expected_sources": ["docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/partitionKey/TimeSeriesPartitionKey.java"],
+    "required_keywords": ["timeseriespartitionkey", "partition"],
+    "difficulty": "easy"
+  },
+  {
+    "question": "Which Java classes query historical time-series data from MongoDB?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/TimeSeriesDataRepository.java",
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/impl/TimeSeriesDataRepositoryImpl.java"
+    ],
+    "required_keywords": ["timeseries", "repository", "mongo"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "Which files implement asset repository access logic?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/AssetRepository.java",
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/impl/AssetRepositoryImpl.java"
+    ],
+    "required_keywords": ["asset", "repository", "impl"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "Which files implement data source repository access logic?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/DataSourceRepository.java",
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/repository/impl/DataSourceRepositoryImpl.java"
+    ],
+    "required_keywords": ["datasource", "repository", "impl"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "Which file defines the MarketDataLoader contract?",
+    "expected_sources": ["docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/ingestion/loader/MarketDataLoader.java"],
+    "required_keywords": ["marketdataloader", "loader"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "Which file contains the default implementation for market data loading?",
+    "expected_sources": ["docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/ingestion/loader/DefaultMarketDataLoader.java"],
+    "required_keywords": ["defaultmarketdataloader", "implementation"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "Which files handle Kafka ingestion streaming in the Java pipeline?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/ingestion/streaming/KafkaIngestionConsumer.java",
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/ingestion/streaming/KafkaIngestionJobService.java"
+    ],
+    "required_keywords": ["kafka", "ingestion", "streaming"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "Where is the MCP server entrypoint implementation in the Java module?",
+    "expected_sources": ["docs/datawarehouse/datawarehouse/mcp_server_java/src/main/java/com/datawarehouse/mcp/WarehouseMcpServer.java"],
+    "required_keywords": ["mcp", "server", "warehouse"],
+    "difficulty": "medium"
+  },
+  {
+    "question": "Where is the Spark logic that computes yearly summaries used for analytics?",
+    "expected_sources": ["docs/datawarehouse/datawarehouse/spark_analysis_ml/compute_yearly_summaries.py"],
+    "required_keywords": ["spark", "yearly", "analytics"],
+    "difficulty": "hard"
+  },
+  {
+    "question": "If I want to change elastic net regularization in the ML pipeline, which file should I edit?",
+    "expected_sources": ["docs/datawarehouse/datawarehouse/spark_analysis_ml/train_price_regression.py"],
+    "required_keywords": ["elastic", "regularization", "regression"],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Which files define partition grouping by time interval and asset identifiers?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/partitionKey/TimeSeriesPartitionKey.java",
+      "docs/datawarehouse/datawarehouse/src/main/java/com/datawarehouse/datawarehouse/dal/partitionKey/AssetKey.java"
+    ],
+    "required_keywords": ["partition", "time", "asset"],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Which files package and configure the infrastructure dependencies for the datawarehouse project?",
+    "expected_sources": [
+      "docs/datawarehouse/datawarehouse/docker-compose.yml",
+      "docs/datawarehouse/datawarehouse/build.gradle"
+    ],
+    "required_keywords": ["docker", "gradle", "dependencies"],
+    "difficulty": "hard"
+  },
+  {
+    "question": "Which Gradle settings file configures the root Java project build structure?",
+    "expected_sources": ["docs/datawarehouse/datawarehouse/settings.gradle"],
+    "required_keywords": ["settings", "gradle", "project"],
+    "difficulty": "hard"
   }
 ]
