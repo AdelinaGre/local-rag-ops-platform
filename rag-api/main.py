@@ -28,13 +28,29 @@ RETRIEVAL_K = int(os.getenv("RETRIEVAL_K", "15"))
 # Maximum chunks sent to LLM context
 TOP_K = int(os.getenv("TOP_K", "10"))
 
-# Maximum Chroma distance accepted.
-MAX_DISTANCE = 1.05
+# Relative distance margin from the best non-RAG result.
+RELATIVE_DISTANCE_MARGIN = float(
+    os.getenv("RELATIVE_DISTANCE_MARGIN", "0.20")
+)
+
+# How much distance penalty to apply per priority level (0 to 4).
+# 0.05 means a Test file (Priority 4) gets a +0.20 penalty to its distance.
+PRIORITY_PENALTY_WEIGHT = float(
+    os.getenv("PRIORITY_PENALTY_WEIGHT", "0.05")
+)
 
 # Maximum number of unique source files sent to the LLM.
 MAX_SOURCES = int(
     os.getenv("MAX_SOURCES", "5")
 )
+
+# Whether to append a human-readable "Sources" footer to the answer text.
+# This is what actually makes sources visible in Open WebUI: when this
+# service is registered as a plain OpenAI-Compatible connection, Open WebUI
+# only renders the `content` field of the message — any extra top-level
+# JSON fields (like `sources` or `rag`) are silently dropped. Embedding the
+# source list directly in the text is the only reliable way to show it.
+APPEND_SOURCES_FOOTER = os.getenv("APPEND_SOURCES_FOOTER", "true").lower() == "true"
 
 # Files that must never be retrieved as project context.
 EXCLUDED_FILES = {
@@ -48,6 +64,15 @@ EXCLUDED_PATH_PARTS = {
     "/eval/",
     "\\eval\\",
 }
+
+# Markers that indicate an internal UI task (tags, titles, etc.)
+SYSTEM_TASK_MARKERS = [
+    "### task:",
+    "generate title",
+    "generate follow-up",
+    "generate 1-3 broad tags",
+    "<chat_history>"
+]
 
 # ============================================================
 # INITIALIZATION
@@ -175,6 +200,31 @@ def source_priority(
 
 
 # ============================================================
+# SOURCES FOOTER FORMATTING
+# ============================================================
+
+def format_sources_footer(citation_list: list) -> str:
+    """
+    Builds a Markdown footer listing the numbered sources so they are
+    visible directly in the chat message text. This is what Open WebUI
+    actually renders (see APPEND_SOURCES_FOOTER note above).
+    """
+    if not citation_list:
+        return ""
+
+    lines = ["", "---", "**Surse:**"]
+    for c in citation_list:
+        file_name = c.get("file", "unknown")
+        path = c.get("path", "")
+        if path:
+            lines.append(f"[{c['id']}] `{path}`")
+        else:
+            lines.append(f"[{c['id']}] `{file_name}`")
+
+    return "\n".join(lines)
+
+
+# ============================================================
 # HEALTH CHECK
 # ============================================================
 
@@ -229,243 +279,185 @@ def chat_completions(req: ChatRequest):
     print("=================================\n")
 
     # --------------------------------------------------------
-    # 2. Create embedding
+    # 1.5 Bypass RAG for system / UI tasks
     # --------------------------------------------------------
 
-    try:
-        query_embedding = embedder.encode(user_query).tolist()
-    except Exception as e:
-        print("Embedding error:", e)
-        raise HTTPException(status_code=500, detail=f"Embedding error: {str(e)}")
+    is_system_task = False
+    lower_query = user_query.lower()
+    if any(marker in lower_query for marker in SYSTEM_TASK_MARKERS):
+        is_system_task = True
+        print("[INFO] System/UI task detected (Tags/Title/Follow-ups). Bypassing ChromaDB retrieval.")
 
-    # --------------------------------------------------------
-    # 3. Search ChromaDB
-    # --------------------------------------------------------
+    # Initialize variables for the final LLM payload
+    messages = [message.model_dump() for message in req.messages]
+    citations = []
 
-    try:
-        results = collection.query(
-            query_embeddings=[query_embedding],
-            n_results=RETRIEVAL_K,
-            include=["documents", "metadatas", "distances"]
-        )
-    except Exception as e:
-        print("ChromaDB error:", e)
-        raise HTTPException(status_code=500, detail=f"ChromaDB error: {str(e)}")
+    documents_retrieved = 0
+    filtered_candidates_count = 0
+    selected_candidates_count = 0
+    unique_sources_count = 0
 
-    print("\n========== CHROMA RESULTS ==========")
-    print("Retrieved:", len(results.get("documents", [[]])[0]))
-    print("Distances:", results.get("distances"))
-    print("====================================\n")
+    # ========================================================
+    # RAG PIPELINE (Execute only for real user queries)
+    # ========================================================
+    if not is_system_task:
+        # --------------------------------------------------------
+        # 2. Create embedding
+        # --------------------------------------------------------
+        try:
+            query_embedding = embedder.encode(user_query).tolist()
+        except Exception as e:
+            print("Embedding error:", e)
+            raise HTTPException(status_code=500, detail=f"Embedding error: {str(e)}")
 
-    # --------------------------------------------------------
-    # 4. Filter + rank + deduplicate
-    # --------------------------------------------------------
+        # --------------------------------------------------------
+        # 3. Search ChromaDB
+        # --------------------------------------------------------
+        try:
+            results = collection.query(
+                query_embeddings=[query_embedding],
+                n_results=RETRIEVAL_K,
+                include=["documents", "metadatas", "distances"]
+            )
+        except Exception as e:
+            print("ChromaDB error:", e)
+            raise HTTPException(status_code=500, detail=f"ChromaDB error: {str(e)}")
 
-    candidates = []
+        documents = results.get("documents", [[]])[0] if results.get("documents") else []
+        metadatas = results.get("metadatas", [[]])[0] if results.get("metadatas") else []
+        distances = results.get("distances", [[]])[0] if results.get("distances") else []
+        documents_retrieved = len(documents)
 
-    documents = results.get("documents", [[]])[0] if results.get("documents") else []
-    metadatas = results.get("metadatas", [[]])[0] if results.get("metadatas") else []
-    distances = results.get("distances", [[]])[0] if results.get("distances") else []
+        # --------------------------------------------------------
+        # 4. Filter + rank + deduplicate
+        # --------------------------------------------------------
+        candidates = []
 
-    for i, doc in enumerate(documents):
+        for i, doc in enumerate(documents):
+            metadata = metadatas[i] if i < len(metadatas) else {}
+            distance = distances[i] if i < len(distances) else float("inf")
 
-        metadata = metadatas[i] if i < len(metadatas) else {}
-        distance = distances[i] if i < len(distances) else 999.0
+            source_file = metadata.get("source_file", "unknown")
+            source_path = metadata.get("source_path", "")
+            chunk_id = metadata.get("chunk_id", f"chunk_{i}")
 
-        source_file = metadata.get("source_file", "unknown")
-        source_path = metadata.get("source_path", "")
-        chunk_id = metadata.get("chunk_id", f"chunk_{i}")
+            # 4.1 Exclude RAG infrastructure
+            if is_excluded_source(source_file, source_path):
+                print(f"[FILTERED - RAG] {source_file} distance={distance:.4f}")
+                continue
 
-        # ----------------------------------------------------
-        # 4.1 Exclude RAG infrastructure
-        # ----------------------------------------------------
-        if is_excluded_source(source_file, source_path):
-            print(f"[FILTERED - RAG] {source_file}")
-            continue
-
-        # ----------------------------------------------------
-        # 4.2 Collect non-RAG candidates
-        # ----------------------------------------------------
-
-        candidates.append(
-            {
+            candidates.append({
                 "document": doc,
                 "metadata": metadata,
                 "source_file": source_file,
                 "source_path": source_path,
                 "chunk_id": chunk_id,
-                "distance": distance
-            }
-        )
+                "distance": distance,
+            })
 
-        # ============================================================
-        # 4.3 RELATIVE RELEVANCE FILTERING
-        # ============================================================
-
+        # 4.3 Relative relevance filtering
         if candidates:
-
-            # Best semantic result
-            best_distance = min(
-                candidate["distance"]
-                for candidate in candidates
-            )
-
-            # Allow results reasonably close to the best result
-            RELATIVE_DISTANCE_MARGIN = 0.20
-
-            relevance_threshold = (
-                    best_distance +
-                    RELATIVE_DISTANCE_MARGIN
-            )
-
+            best_distance = min(candidate["distance"] for candidate in candidates)
+            relevance_threshold = best_distance + RELATIVE_DISTANCE_MARGIN
             filtered_candidates = []
 
             for candidate in candidates:
-
                 if candidate["distance"] <= relevance_threshold:
-
                     filtered_candidates.append(candidate)
-
                 else:
-
                     print(
-                        f"[FILTERED - DISTANCE] "
-                        f"{candidate['source_file']} "
-                        f"distance={candidate['distance']:.4f}"
+                        f"[FILTERED - DISTANCE] {candidate['source_file']} "
+                        f"distance={candidate['distance']:.4f} threshold={relevance_threshold:.4f}"
                     )
-
             candidates = filtered_candidates
-    # ============================================================
-    # 4.4 RANK CANDIDATES
-    # ============================================================
 
-    for candidate in candidates:
-        candidate["priority"] = source_priority(
-            candidate["source_file"],
-            user_query
-        )
+        filtered_candidates_count = len(candidates)
 
-    # Semantic relevance remains the primary signal.
-    # Source priority is only a secondary signal.
+        # 4.4 Rank candidates (Adjusted Distance)
+        for candidate in candidates:
+            priority = source_priority(candidate["source_file"], user_query)
+            candidate["priority"] = priority
 
-    candidates.sort(
-        key=lambda x: (
-            x["distance"],
-            x["priority"]
-        )
-    )
-    # ============================================================
-    # 4.5 DEDUPLICATE CHUNKS
-    # ============================================================
+            # Apply mathematical penalty to allow distance to dominate, but punish test/irrelevant files softly
+            candidate["adjusted_distance"] = candidate["distance"] + (priority * PRIORITY_PENALTY_WEIGHT)
 
-    selected_candidates = []
+        # Sort primarily by adjusted_distance (lowest is best)
+        candidates.sort(key=lambda x: (x["adjusted_distance"], x["distance"]))
 
-    seen_chunks = set()
+        # 4.5 Deduplicate chunks
+        selected_candidates = []
+        seen_chunks = set()
 
-    for candidate in candidates:
+        for candidate in candidates:
+            chunk_key = (candidate["source_file"], candidate["chunk_id"])
+            if chunk_key in seen_chunks:
+                continue
 
-        chunk_key = (
-            candidate["source_file"],
-            candidate["chunk_id"]
-        )
+            seen_chunks.add(chunk_key)
+            selected_candidates.append(candidate)
 
-        if chunk_key in seen_chunks:
-            continue
+            if len(selected_candidates) >= TOP_K:
+                break
 
-        seen_chunks.add(chunk_key)
+        selected_candidates_count = len(selected_candidates)
 
-        selected_candidates.append(candidate)
+        # 4.6 Unique citation metadata
+        unique_citation_metadata = []
+        seen_sources = set()
 
-        if len(selected_candidates) >= TOP_K:
-            break
-    # ============================================================
-    # 4.6 UNIQUE SOURCES FOR CITATIONS
-    # ============================================================
+        for candidate in selected_candidates:
+            source_file = candidate["source_file"]
+            if source_file in seen_sources:
+                continue
 
-    unique_sources = []
-    seen_sources = set()
-    unique_citation_metadata = []
+            seen_sources.add(source_file)
+            unique_citation_metadata.append(candidate)
 
-    for candidate in selected_candidates:
-        source_file = candidate["source_file"]
+            if len(unique_citation_metadata) >= MAX_SOURCES:
+                break
 
-        if source_file in seen_sources:
-            continue
+        unique_sources_count = len(unique_citation_metadata)
 
-        seen_sources.add(source_file)
-        unique_sources.append(source_file)
-        unique_citation_metadata.append(candidate)
+        # 4.7 Logging
+        print("\n========== FILTERED & RANKED SOURCES ==========")
+        for candidate in candidates:
+            print(
+                f"{candidate['source_file']} "
+                f"raw_dist={candidate['distance']:.4f} "
+                f"adj_dist={candidate['adjusted_distance']:.4f} "
+                f"prio={candidate['priority']}"
+            )
 
-        if len(unique_sources) >= MAX_SOURCES:
-            break
+        # 5. Build context
+        context_parts = []
+        for index, candidate in enumerate(selected_candidates, start=1):
+            source_file = candidate["source_file"]
+            source_path = candidate["source_path"]
+            document = candidate["document"]
+            distance = candidate["distance"]
 
-    # ============================================================
-    # 4.7 LOGGING
-    # ============================================================
+            context_parts.append(
+                f'<source id="{index}">\n'
+                f"File: {source_file}\n"
+                f"Path: {source_path}\n"
+                f"Relevance distance: {distance:.4f}\n"
+                f"Content:\n{document}\n"
+                f"</source>"
+            )
 
-    print("\n========== FILTERED SOURCES ==========")
-    for candidate in candidates:
-        print(
-            f"{candidate['source_file']} "
-            f"distance={candidate['distance']:.4f} "
-            f"priority={candidate['priority']}"
-        )
-
-    print("\n========== SELECTED SOURCES ==========")
-    for candidate in selected_candidates:
-        print(
-            f"{candidate['source_file']} "
-            f"distance={candidate['distance']:.4f} "
-            f"priority={candidate['priority']}"
-        )
-
-    print("\n========== CITATION SOURCES ==========")
-    for source in unique_sources:
-        print(source)
-    print("=======================================\n")
-
-    # --------------------------------------------------------
-    # 5. Build context
-    # --------------------------------------------------------
-
-    context_parts = []
-    citations = []
-
-    # Send selected chunks to LLM Context
-    for index, candidate in enumerate(selected_candidates, start=1):
-        source_file = candidate["source_file"]
-        source_path = candidate["source_path"]
-        document = candidate["document"]
-        distance = candidate["distance"]
-
-        context_parts.append(
-            f'<source id="{index}">\n'
-            f"File: {source_file}\n"
-            f"Path: {source_path}\n"
-            f"Relevance distance: {distance:.4f}\n"
-            f"Content:\n{document}\n"
-            f"</source>"
-        )
-
-    # Return Unique Sources for API Citations (Deduplicated)
-    for index, candidate in enumerate(unique_citation_metadata, start=1):
-        citations.append(
-            {
+        for index, candidate in enumerate(unique_citation_metadata, start=1):
+            citations.append({
                 "id": index,
                 "file": candidate["source_file"],
                 "path": candidate["source_path"],
-                "distance": round(candidate["distance"], 4)
-            }
-        )
+                "distance": round(candidate["distance"], 4),
+            })
 
-    context_text = "\n\n---\n\n".join(context_parts)
+        context_text = "\n\n---\n\n".join(context_parts)
 
-    # --------------------------------------------------------
-    # 6. Build RAG prompt
-    # --------------------------------------------------------
-
-    if context_text:
-        augmented_prompt = f"""
+        # 6. Build RAG prompt
+        if context_text:
+            augmented_prompt = f"""
 You are a Senior Data Engineer analyzing a software repository.
 
 Answer the user's question using ONLY the retrieved repository
@@ -495,8 +487,8 @@ USER QUESTION:
 
 {user_query}
 """
-    else:
-        augmented_prompt = f"""
+        else:
+            augmented_prompt = f"""
 You are a strict technical assistant.
 
 The retrieval system did not find sufficiently relevant
@@ -516,17 +508,12 @@ USER QUESTION:
 {user_query}
 """
 
-    # --------------------------------------------------------
-    # 7. Replace only the latest user message
-    # --------------------------------------------------------
+        # 7. Replace only the latest user message with context
+        messages[-1]["content"] = augmented_prompt
 
-    messages = [message.model_dump() for message in req.messages]
-    messages[-1]["content"] = augmented_prompt
-
-    # --------------------------------------------------------
-    # 8. Prepare llama.cpp request
-    # --------------------------------------------------------
-
+    # ========================================================
+    # 8. Prepare llama.cpp request (For both RAG and Bypassed tasks)
+    # ========================================================
     payload = {
         "model": req.model,
         "messages": messages,
@@ -540,14 +527,14 @@ USER QUESTION:
     print("\n========== LLAMA REQUEST ==========")
     print("LLAMA URL:", LLAMA_API_URL)
     print("MODEL:", req.model)
-    print("SELECTED CHUNKS FOR CONTEXT:", len(selected_candidates))
+    print("IS SYSTEM TASK:", is_system_task)
+    print("SELECTED CHUNKS FOR CONTEXT:", selected_candidates_count)
     print("UNIQUE CITATIONS:", len(citations))
     print("===================================\n")
 
     # --------------------------------------------------------
     # 9. Send request to llama.cpp
     # --------------------------------------------------------
-
     try:
         resp = requests.post(
             f"{LLAMA_API_URL}/chat/completions",
@@ -560,8 +547,7 @@ USER QUESTION:
     except requests.exceptions.Timeout:
         raise HTTPException(status_code=504, detail="Timeout communicating with llama.cpp")
     except requests.exceptions.RequestException as e:
-        print("ERROR communicating with llama.cpp:")
-        print(e)
+        print("ERROR communicating with llama.cpp:", e)
         raise HTTPException(status_code=500, detail=f"Error communicating with llama.cpp: {str(e)}")
     except ValueError as e:
         raise HTTPException(status_code=500, detail=f"Invalid JSON response from llama.cpp: {str(e)}")
@@ -569,25 +555,36 @@ USER QUESTION:
     # --------------------------------------------------------
     # 10. Clean LLM answer
     # --------------------------------------------------------
-
     try:
         answer = llama_data["choices"][0]["message"]["content"].strip()
     except (KeyError, IndexError, TypeError):
         raise HTTPException(status_code=500, detail="Unexpected response format from llama.cpp")
 
     # --------------------------------------------------------
+    # 10.5 Append a human-readable sources footer directly into the
+    # answer text. This is the part that actually shows up in Open
+    # WebUI: when this service is registered as a plain OpenAI-Compatible
+    # connection, Open WebUI only ever renders `message.content` — it
+    # does not read custom top-level fields like `sources` or `rag`.
+    # --------------------------------------------------------
+    if APPEND_SOURCES_FOOTER and not is_system_task and citations:
+        answer = answer + format_sources_footer(citations)
+
+    # --------------------------------------------------------
     # 11. Return clean citations separately
     # --------------------------------------------------------
-
     llama_data["choices"][0]["message"]["content"] = answer
 
-    # Add structured RAG metadata.
+    # Add structured RAG metadata. Kept for debugging / for clients that
+    # do read the raw API response directly (e.g. curl, your own scripts).
+    # Open WebUI itself will ignore these two fields — see note above.
     llama_data["rag"] = {
-        "retrieved": len(documents),
-        "filtered": len(candidates),
-        "selected": len(selected_candidates),
-        "unique_sources": len(unique_sources),
-        "max_distance": MAX_DISTANCE
+        "bypassed": is_system_task,
+        "retrieved": documents_retrieved,
+        "filtered": filtered_candidates_count,
+        "selected": selected_candidates_count,
+        "unique_sources": unique_sources_count,
+        "relative_distance_margin": RELATIVE_DISTANCE_MARGIN
     }
 
     llama_data["sources"] = citations
@@ -595,5 +592,4 @@ USER QUESTION:
     # --------------------------------------------------------
     # 12. Return OpenAI-compatible response
     # --------------------------------------------------------
-
     return llama_data
