@@ -52,6 +52,12 @@ MAX_SOURCES = int(
 # source list directly in the text is the only reliable way to show it.
 APPEND_SOURCES_FOOTER = os.getenv("APPEND_SOURCES_FOOTER", "true").lower() == "true"
 
+# Fallback token budget for real (non-system-task) answers when the client
+# doesn't specify max_tokens. Explanatory, Claude-style answers need more
+# room than a one-line pointer to a file — without this, llama.cpp's own
+# default may cut the explanation short.
+DEFAULT_ANSWER_MAX_TOKENS = int(os.getenv("DEFAULT_ANSWER_MAX_TOKENS", "1200"))
+
 # Files that must never be retrieved as project context.
 EXCLUDED_FILES = {
     "main.py",
@@ -458,25 +464,41 @@ def chat_completions(req: ChatRequest):
         # 6. Build RAG prompt
         if context_text:
             augmented_prompt = f"""
-You are a Senior Data Engineer analyzing a software repository.
+You are a Senior Data Engineer explaining a software repository to a
+colleague who wants to actually understand how it works, not just get
+a file name pointed at them.
 
 Answer the user's question using ONLY the retrieved repository
 context below.
 
+RESPONSE SHAPE (follow this order):
+
+1. Start with a short, direct answer to the question (1-2 sentences).
+2. Then explain HOW it works: walk through the relevant logic in your
+   own words — name the key classes/methods/fields involved and what
+   each one actually does. Do not just paste code back; explain the
+   reasoning and flow (e.g. "the query first does X, then Y, because Z").
+3. If more than one file is involved, briefly explain how they relate
+   to each other (e.g. interface vs implementation, caller vs callee).
+4. Use short paragraphs or bullet points for anything non-trivial —
+   avoid a single dense wall of text.
+
 IMPORTANT RULES:
 
-1. Answer the question directly.
-2. Do not invent files, classes, methods, queries, or behavior.
-3. Do not mention the RAG system itself.
-4. Do not mention main.py unless the user explicitly asks about it.
-5. Do not mention irrelevant files.
-6. Prefer actual implementation files over test files when
+1. Do not invent files, classes, methods, queries, or behavior that
+   is not present in the retrieved context.
+2. Do not mention the RAG system itself.
+3. Do not mention main.py unless the user explicitly asks about it.
+4. Do not mention irrelevant files.
+5. Prefer actual implementation files over test files when
    answering implementation questions.
-7. Each source should be cited at most once.
-8. Use citations in this format: [1], [2], etc.
-9. Do not create a separate "Sources used" section.
-10. Answer in the same language as the user's question.
-11. If the retrieved context is insufficient, say:
+6. Cite sources inline, next to the specific claim they support, in
+   the format [1], [2], etc. Each source should be cited at most once.
+7. Do not create a separate "Sources used" section — the system adds
+   one automatically after your answer.
+8. Answer in the same language as the user's question.
+9. If the retrieved context is insufficient to explain the answer,
+   say so explicitly rather than filling gaps with assumptions:
    "I could not find enough relevant context to answer this question."
 
 RETRIEVED CONTEXT:
@@ -523,6 +545,8 @@ USER QUESTION:
 
     if req.max_tokens is not None:
         payload["max_tokens"] = req.max_tokens
+    elif not is_system_task:
+        payload["max_tokens"] = DEFAULT_ANSWER_MAX_TOKENS
 
     print("\n========== LLAMA REQUEST ==========")
     print("LLAMA URL:", LLAMA_API_URL)
