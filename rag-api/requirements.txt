@@ -3,4 +3,6 @@ uvicorn[standard]
 requests
 chromadb
 sentence-transformers
-torch
+torch --index-url https://download.pytorch.org/whl/cpu
+torchaudio --index-url https://download.pytorch.org/whl/cpu
+torchvision --index-url https://download.pytorch.org/whl/cpu
